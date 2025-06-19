@@ -20,6 +20,14 @@ const client = new MongoClient(uri, {
 
 const SECRET = process.env.JWT_SECRET || 'supersecret';
 
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// === semua route (`/api/*`) pindahkan ke sini ===
+// contoh:
+app.get('/api/health', (_, res) => res.json({ ok: true }));
+
 async function startServer() {
     try {
         // 1) Koneksi ke MongoDB
@@ -33,12 +41,7 @@ async function startServer() {
         const usersCol = db.collection('users');
 
         // 3) Buat aplikasi Express
-        const app = express();
         const PORT = process.env.PORT || 3001;
-
-        // Middleware
-        app.use(cors());
-        app.use(express.json());
 
         // 4) Endpoint health check
         app.get('/api/health', (req, res) => {
@@ -229,13 +232,6 @@ async function startServer() {
             res.json({ token });
         });
 
-        // 13) Mulai server
-        app.listen(PORT, () => {
-            console.log(`🚀  Server berjalan di http://localhost:${PORT}`);
-            console.log(`🎬  Endpoint list film   : http://localhost:${PORT}/api/movies`);
-            console.log(`🔍  Endpoint cari film   : http://localhost:${PORT}/api/movies/search?title=Batman`);
-        });
-
         // 14) Penanganan graceful shutdown
         process.on('SIGINT', async () => {
             console.log('\n🛑  Menutup server...');
@@ -250,3 +246,13 @@ async function startServer() {
 }
 
 startServer();
+
+// Jalankan server hanya jika tidak di lingkungan Netlify/ Lambda
+if (!process.env.LAMBDA_TASK_ROOT && !process.env.NETLIFY && !process.env.AWS_EXECUTION_ENV) {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+        console.log(`🚀  Server lokal berjalan di http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;          // ← ekspor tanpa listen
